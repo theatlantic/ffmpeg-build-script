@@ -399,7 +399,7 @@ if ! $MACOS_M1; then
   if build "svtav1"; then
     download "https://github.com/AOMediaCodec/SVT-AV1/archive/v0.8.6.tar.gz"
     cd Build/linux || exit
-    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../.. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../.. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR:PATH=lib
     execute make -j $MJOBS
     execute make install
     execute cp SvtAv1Enc.pc "${WORKSPACE}/lib/pkgconfig/"
@@ -515,6 +515,18 @@ if build "av1"; then
   build_done "av1"
 fi
 CONFIGURE_OPTIONS+=("--enable-libaom")
+
+if build "svt-hevc"; then
+  download "https://github.com/OpenVisualCloud/SVT-HEVC/archive/d5dd0f8.tar.gz" "svt-hevc-d5dd0f8.tar.gz"
+  cd Build/linux || exit
+
+  sed -i.backup 's/  check_executable sudo/  \# check_executable sudo/' build.sh
+
+  CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_LIBDIR:PATH=lib" execute ./build.sh "prefix=${WORKSPACE}" static release install
+
+  build_done "svt-hevc"
+fi
+CONFIGURE_OPTIONS+=("--enable-libsvthevc")
 
 ##
 ## audio library
@@ -676,6 +688,14 @@ fi
 
 build "ffmpeg"
 download "https://git.ffmpeg.org/gitweb/ffmpeg.git/snapshot/553eb0773763798a6b9656b621cb125e1f6edbcc.tar.gz"
+download "https://github.com/FFmpeg/FFmpeg/archive/b1d99ab.tar.gz" "ffmpeg-b1d99ab.tar.gz"
+
+hevc_patch=$(ls $PACKAGES/svt-hevc-*/ffmpeg_plugin/0001-lavc-svt_hevc-add-libsvt-hevc-encoder-wrapper.patch)
+if patch -f --dry-run -p1 -i $hevc_patch >/dev/null; then
+  echo "Applying SVT-HEVC patch"
+  patch -p1 -i $hevc_patch
+fi
+
 # shellcheck disable=SC2086
 ./configure "${CONFIGURE_OPTIONS[@]}" \
   --disable-debug \
