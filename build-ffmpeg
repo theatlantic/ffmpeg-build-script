@@ -378,19 +378,33 @@ if build "vid_stab"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libvidstab")
 
+if build "svt-av1"; then
+	download "https://github.com/AOMediaCodec/SVT-AV1/archive/2936d57.tar.gz" "svt-av1-2936d57.tar.gz"
+	cd Build/linux || exit
+		sed -i.backup 's/check_executable \-p sudo/check_executable \-p sudo || true/' build.sh
 
-if build "av1"; then
-	download "https://aomedia.googlesource.com/aom/+archive/430d58446e1f71ec2283af0d6c1879bc7a3553dd.tar.gz" "av1.tar.gz" "av1"
-	make_dir "$PACKAGES"/aom_build
-	cd "$PACKAGES"/aom_build || exit
-	execute cmake -DENABLE_TESTS=0 -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_INSTALL_LIBDIR=lib "$PACKAGES"/av1
-	execute make -j $MJOBS
-	execute make install
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		echo "Applying Darwin patch"
+		perl -p0i -e 's/(?<=\n)(\s*?)toolchain=\*\)\n.*?\n\1    ;;\n//sm' build.sh
+	fi
 
-	build_done "av1"
+	CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_LIBDIR:PATH=lib" execute ./build.sh "prefix=${WORKSPACE}" static release install
+
+	build_done "svt-av1"
 fi
-CONFIGURE_OPTIONS+=("--enable-libaom")
+CONFIGURE_OPTIONS+=("--enable-libsvtav1")
 
+if build "svt-hevc"; then
+	download "https://github.com/OpenVisualCloud/SVT-HEVC/archive/d5dd0f8.tar.gz" "svt-hevc-d5dd0f8.tar.gz"
+	cd Build/linux || exit
+
+	sed -i.backup 's/  check_executable sudo/  \# check_executable sudo/' build.sh
+
+	CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_LIBDIR:PATH=lib" execute ./build.sh "prefix=${WORKSPACE}" static release install
+
+	build_done "svt-hevc"
+fi
+CONFIGURE_OPTIONS+=("--enable-libsvthevc")
 
 ##
 ## audio library
@@ -555,7 +569,14 @@ fi
 ##
 
 build "ffmpeg"
-download "https://ffmpeg.org/releases/ffmpeg-4.3.1.tar.bz2"
+download "https://github.com/FFmpeg/FFmpeg/archive/b1d99ab.tar.gz" "ffmpeg-b1d99ab.tar.gz"
+
+hevc_patch=$(ls $PACKAGES/svt-hevc-*/ffmpeg_plugin/0001-lavc-svt_hevc-add-libsvt-hevc-encoder-wrapper.patch)
+if patch -f --dry-run -p1 -i $hevc_patch >/dev/null; then
+	echo "Applying SVT-HEVC patch"
+	patch -p1 -i $hevc_patch
+fi
+
 # shellcheck disable=SC2086
 ./configure "${CONFIGURE_OPTIONS[@]}" \
 	--disable-debug \
