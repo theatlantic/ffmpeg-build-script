@@ -596,10 +596,8 @@ CONFIGURE_OPTIONS+=("--enable-libfdk-aac")
 ##
 
 if build "libwebp"; then
-  download "https://github.com/webmproject/libwebp/archive/v1.1.0.tar.gz" "libwebp-1.1.0.tar.gz"
-  make_dir build
-  cd build || exit
-  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -DENABLE_SHARED=OFF -DENABLE_STATIC=ON ../
+  download "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.1.0.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-libwebpmux
   execute make -j $MJOBS
   execute make install
 
