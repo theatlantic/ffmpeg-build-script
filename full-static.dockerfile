@@ -12,22 +12,22 @@ RUN apt-get update \
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
 
-RUN AUTOINSTALL=yes /app/build-ffmpeg --build --full-static
+RUN SKIPINSTALL=yes /app/build-ffmpeg --build --full-static
 
 # Check shared library
 RUN ! ldd /app/workspace/bin/ffmpeg
 RUN ! ldd /app/workspace/bin/ffprobe
 RUN ! ldd /app/workspace/bin/ffplay
 
-FROM scratch
+FROM ubuntu:20.04
 
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
 
 # Copy ffmpeg
-COPY --from=build /app/workspace/bin/ffmpeg /ffmpeg
-COPY --from=build /app/workspace/bin/ffprobe /ffprobe
-COPY --from=build /app/workspace/bin/ffplay /ffplay
+COPY --from=build /app/workspace/bin/ffmpeg /usr/bin/ffmpeg
+COPY --from=build /app/workspace/bin/ffprobe /usr/bin/ffprobe
+COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
 
 CMD         ["--help"]
-ENTRYPOINT  ["/ffmpeg"]
+ENTRYPOINT  ["/usr/bin/ffmpeg"]

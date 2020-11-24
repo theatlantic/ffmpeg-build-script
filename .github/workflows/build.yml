@@ -15,6 +15,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Cache openssl
+        uses: actions/cache@v2
+        with:
+          path: ./workspace/packages/openssl-1.1.1h
+          key: ubuntu-20-openssl-1.1.1h
+      - name: Cache cmake
+        uses: actions/cache@v2
+        with:
+          path: ./workspace/packages/cmake-3.18.4
+          key: ubuntu-20-cmake-3.18.4
+
       - name: install libva-dev
         run: |
           sudo apt-get update
@@ -31,9 +42,6 @@ jobs:
       - name: test run ffmepg
         run: |
           ./workspace/bin/ffmpeg -buildconf
-      - name: clean up
-        run: |
-          ./build-ffmpeg --cleanup
 
   build-macos:
     name: build in native macOS
@@ -41,6 +49,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Cache openssl
+        uses: actions/cache@v2
+        with:
+          path: ./workspace/packages/openssl-1.1.1h
+          key: macos-10.15-openssl-1.1.1h
+      - name: Cache cmake
+        uses: actions/cache@v2
+        with:
+          path: ./workspace/packages/cmake-3.18.4
+          key: macos-10.15-cmake-3.18.4
 
       - name: build ffmpeg
         run: |
@@ -53,9 +72,11 @@ jobs:
       - name: test run ffmepg
         run: |
           ./workspace/bin/ffmpeg -buildconf
-      - name: clean up
-        run: |
-          ./build-ffmpeg --cleanup
+      - name: upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ffmpeg-macos-static-binaries
+          path: workspace/bin/ff*
 
   build-docker:
     name: build in docker
@@ -78,6 +99,37 @@ jobs:
       - name: test run ffmepg
         run: |
           docker run --rm ffmpeg:ubuntu -buildconf
+
+  build-docker-full-static:
+    name: build in docker with full-static
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: pull base image
+        id: ubuntu_pull
+        run: |
+          docker pull ubuntu:20.04
+      - name: run if ubuntu_pull failed
+        if: failure() && steps.ubuntu_pull.outcome == 'failure'
+        run: |
+          docker pull ubuntu:20.04
+      - name: build ffmpeg
+        run: |
+          docker build -t ffmpeg:ubuntu --build-arg "BUILD_FLAG=--build --full-static" -f Dockerfile .
+      - name: test run ffmepg
+        run: |
+          docker run --rm ffmpeg:ubuntu -buildconf
+      - name: extract binaries
+        run: |
+          mkdir -p workspace
+          docker run --rm --entrypoint="" ffmpeg:ubuntu tar Ccf /usr - bin/ff{probe,mpeg} | tar Cxf workspace -
+      - name: upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ffmpeg-linux-static-binaries
+          path: workspace/bin/ff*
 
   build-cuda-ubuntu-docker:
     name: build in ubuntu docker with cuda
@@ -127,8 +179,8 @@ jobs:
         run: |
           docker run --rm ffmpeg:cuda-centos -buildconf
 
-  build-full-static:
-    name: full static build in docker
+  build-cuda-ubuntu-full-static:
+    name: full static cuda build in docker
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
@@ -148,3 +200,13 @@ jobs:
       - name: test run ffmepg
         run: |
           docker run --rm ffmpeg:cuda-static -buildconf
+      - name: extract binaries
+        run: |
+          mkdir -p workspace
+          docker run --rm --entrypoint="" ffmpeg:cuda-static tar Ccf /usr - bin/ff{probe,mpeg} | tar Cxf workspace -
+      - name: upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ffmpeg-linux-cuda-static-binaries
+          path: workspace/bin/ff*
+      
