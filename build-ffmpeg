@@ -12,7 +12,7 @@ CFLAGS="-I$WORKSPACE/include"
 CPPFLAGS=-I$PREFIX/include
 LDFLAGS="-L$WORKSPACE/lib"
 LDEXEFLAGS=""
-EXTRALIBS="-ldl -lpthread -lm -lz"
+EXTRALIBS="-ldl -lpthread -lm -lz -liconv"
 MACOS_M1=false
 CONFIGURE_OPTIONS=()
 # Check for Apple Silicon
@@ -23,6 +23,10 @@ if [[ ("$(uname -m)" == "arm64") && ("$OSTYPE" == "darwin"*) ]]; then
   MACOS_M1=true
 fi
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  EXTRALIBS="-liconv"
+fi
+
 # Speed up the process
 # Env Var NUMJOBS overrides automatic detection
 if [[ -n "$NUMJOBS" ]]; then
@@ -31,7 +35,10 @@ elif [[ -f /proc/cpuinfo ]]; then
   MJOBS=$(grep -c processor /proc/cpuinfo)
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   MJOBS=$(sysctl -n machdep.cpu.thread_count)
-  CONFIGURE_OPTIONS=("--enable-videotoolbox")
+  CONFIGURE_OPTIONS+=("--enable-videotoolbox" "--enable-coreimage" "--enable-audiotoolbox" "--enable-opencl" "--enable-opengl")
+  for fmt in mpeg1 mpeg2 hevc h264 h263 mpeg4; do
+    CONFIGURE_OPTIONS+=("--enable-hwaccel=${fmt}_videotoolbox")
+  done
 else
   MJOBS=4
 fi
@@ -373,6 +380,7 @@ if build "zlib"; then
   execute make install
   build_done "zlib"
 fi
+CONFIGURE_OPTIONS+=("--enable-zlib")
 
 if build "openssl"; then
   download "https://www.openssl.org/source/openssl-1.1.1i.tar.gz"
@@ -409,6 +417,43 @@ if ! $MACOS_M1; then
   fi
   CONFIGURE_OPTIONS+=("--enable-libsvtav1")
 fi
+
+##
+## basic libraries
+##
+
+if build "iconv"; then
+  download "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.16.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --disable-debug --enable-extra-encodings
+  execute make -j $MJOBS install-lib
+  execute make -j $MJOBS install-lib -C libcharset
+  execute make install
+
+  build_done "iconv"
+fi
+CONFIGURE_OPTIONS+=("--enable-iconv")
+
+if build "xz"; then
+  download "https://tukaani.org/xz/xz-5.2.5.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+  execute make -j $MJOBS install
+
+  build_done "xz"
+fi
+CONFIGURE_OPTIONS+=("--enable-lzma")
+
+if build "bzip2"; then
+  download "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+  sed -i.backup '/LDFLAGS=/d' Makefile
+  sed -i.backup 's/CFLAGS=/CFLAGS+=/g' Makefile
+  
+  execute make -j $MJOBS install PREFIX="${WORKSPACE}"
+
+  build_done "bzip2"
+fi
+CONFIGURE_OPTIONS+=("--enable-bzlib")
+  
+
 
 ##
 ## video library
@@ -722,6 +767,14 @@ if build "srt"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libsrt")
 
+if build "libxml2"; then
+  download "http://xmlsoft.org/sources/libxml2-2.9.10.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" -disable-shared --enable-static --without-python --with-zlib="${WORKSPACE}" --with-lzma="${WORKSPACE}" --with-iconv="${WORKSPACE}"
+  execute make -j $MJOBS install
+
+  build_done "libxml2"
+fi
+
 ##
 ## HWaccel library
 ##
@@ -736,7 +789,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
     fi
     CFLAGS+=" -I/usr/local/cuda/include"
     LDFLAGS+=" -L/usr/local/cuda/lib64"
-    CONFIGURE_OPTIONS+=("--enable-cuda-nvcc" "--enable-cuvid" "--enable-nvenc" "--enable-cuda-llvm")
+    CONFIGURE_OPTIONS+=("--enable-ffnvcodec" "--enable-cuda-nvcc" "--enable-cuvid" "--enable-nvdec" "--enable-nvenc" "--enable-cuda-llvm")
 
     if [ -z "$LDEXEFLAGS" ]; then
       CONFIGURE_OPTIONS+=("--enable-libnpp") # Only libnpp cannot be statically linked.
@@ -744,16 +797,23 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
     # https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
     CONFIGURE_OPTIONS+=("--nvccflags=-gencode arch=compute_52,code=sm_52")
+
+    for fmt in wmv3 hevc h264 vc1 vp9 av1 mpeg4 mjpeg vp8 mpeg2 mpeg1; do
+      CONFIGURE_OPTIONS+=("--enable-hwaccel=${fmt}_nvdec")
+    done
   fi
 
   # Vaapi doesn't work well with static links FFmpeg.
   if [ -z "$LDEXEFLAGS" ]; then
     # If the libva development SDK is installed, enable vaapi.
-    if library_exists "libva"; then
+    if library_exists "libva" ; then
       if build "vaapi"; then
         build_done "vaapi"
       fi
       CONFIGURE_OPTIONS+=("--enable-vaapi")
+      for fmt in wmv3 hevc h264 vc1 vp9 av1 mpeg4 h263 mjpeg vp8 mpeg2; do
+        CONFIGURE_OPTIONS+=("--enable-hwaccel=${fmt}_vaapi")
+      done
     fi
   fi
 fi
@@ -773,7 +833,12 @@ if patch -f --dry-run -p1 -i $hevc_patch >/dev/null; then
 fi
 
 # shellcheck disable=SC2086
-./configure "${CONFIGURE_OPTIONS[@]}" \
+execute ./configure "${CONFIGURE_OPTIONS[@]}" \
+  --disable-autodetect \
+  --enable-decoders \
+  --enable-encoders \
+  --enable-demuxers \
+  --enable-muxers \
   --disable-debug \
   --disable-doc \
   --disable-shared \
@@ -785,7 +850,7 @@ fi
   --enable-version3 \
   --extra-cflags="${CFLAGS}" \
   --extra-ldexeflags="${LDEXEFLAGS}" \
-  --extra-ldflags="${LDFLAGS}" \
+  --extra-ldflags="${LDFLAGS} -liconv" \
   --extra-libs="${EXTRALIBS}" \
   --pkgconfigdir="$WORKSPACE/lib/pkgconfig" \
   --pkg-config-flags="--static" \
