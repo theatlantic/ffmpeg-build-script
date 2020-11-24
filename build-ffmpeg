@@ -435,13 +435,15 @@ if build "x265"; then
   download "https://github.com/videolan/x265/archive/Release_3.5.tar.gz" "x265-3.5.tar.gz"
   cd build/linux || exit
 
-  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../../source
-  execute make -j $MJOBS
-  execute make install
+  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=OFF -DSTATIC_LINK_CRT=ON -DENABLE_CLI=OFF -DBUILD_SHARED_LIBS=OFF ../../source
 
   if [ -n "$LDEXEFLAGS" ]; then
-    sed -i.backup 's/-lgcc_s/-lgcc_eh/g' "${WORKSPACE}/lib/pkgconfig/x265.pc" # The -i.backup is intended and required on MacOS: https://stackoverflow.com/questions/5694228/sed-in-place-flag-that-works-both-on-mac-bsd-and-linux
+    sed -i.backup 's/-lgcc_s/-lgcc_eh/g' x265.pc # The -i.backup is intended and required on MacOS: https://stackoverflow.com/questions/5694228/sed-in-place-flag-that-works-both-on-mac-bsd-and-linux
   fi
+
+  execute ./multilib.sh
+  execute make -j $MJOBS
+  execute make install
 
   build_done "x265"
 fi
