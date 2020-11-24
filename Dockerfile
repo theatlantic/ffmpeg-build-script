@@ -1,5 +1,7 @@
 FROM ubuntu:20.04 AS build
 
+ARG BUILD_FLAG=--build
+
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update \
@@ -10,7 +12,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
 
-RUN SKIPINSTALL=yes /app/build-ffmpeg --build
+RUN SKIPINSTALL=yes /app/build-ffmpeg $BUILD_FLAG
 
 FROM ubuntu:20.04
 
