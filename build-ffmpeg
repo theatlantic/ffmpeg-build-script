@@ -9,6 +9,7 @@ CWD=$(pwd)
 PACKAGES="$CWD/packages"
 WORKSPACE="$CWD/workspace"
 CFLAGS="-I$WORKSPACE/include"
+CPPFLAGS=-I$PREFIX/include
 LDFLAGS="-L$WORKSPACE/lib"
 LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz"
@@ -609,9 +610,70 @@ CONFIGURE_OPTIONS+=("--enable-libfdk-aac")
 ## image library
 ##
 
+if build "libjpeg"; then
+  download "https://sourceforge.net/projects/libjpeg-turbo/files/2.0.6/libjpeg-turbo-2.0.6.tar.gz"
+  make_dir build
+  cd build || exit 1
+  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DREQUIRE_SIMD=TRUE -DWITH_JPEG8=1 ../
+  execute make -j $MJOBS
+  execute make install
+  build_done "libjpeg"
+fi
+
+if build "giflib"; then
+  download "https://downloads.sourceforge.net/project/giflib/giflib-5.1.4.tar.bz2"
+  # Override autoconf variable to prevent flaky docs from building
+  export have_xmlto=no
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "giflib"
+fi
+
+if build "libpng"; then
+  download "https://sourceforge.net/projects/libpng/files/libpng16/1.6.37/libpng-1.6.37.tar.xz"
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-sysroot="${WORKSPACE}"
+  execute make -j $MJOBS CPPFLAGS="$CPPFLAGS"
+  execute make install
+
+  build_done "libpng"
+fi
+
+if build "libtiff"; then
+  download "https://download.osgeo.org/libtiff/tiff-4.1.0.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --disable-debug --disable-webp --enable-lzma --disable-zstd --disable-shared --enable-static
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "libtiff"
+fi
+
 if build "libwebp"; then
   download "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.1.0.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-libwebpmux
+
+  WEBP_OPTIONS=()
+  if [[ "$OSTYPE" == "linux"* ]]; then
+    WEBP_OPTIONS+=("--disable-gl")
+  fi
+
+  execute ./configure --prefix="${WORKSPACE}" --disable-debug \
+    "${WEBP_OPTIONS[@]}" \
+    --enable-libwebpdecoder \
+    --enable-libwebpdemux \
+    --enable-libwebpmux \
+    --disable-shared \
+    --disable-dependency-tracking \
+    --disable-sdl \
+    --with-pngincludedir="${WORKSPACE}/include" \
+    --with-pnglibdir="${WORKSPACE}/lib" \
+    --with-jpegincludedir="${WORKSPACE}/include" \
+    --with-jpeglibdir="${WORKSPACE}/lib" \
+    --with-tiffincludedir="${WORKSPACE}/include" \
+    --with-tifflibdir="${WORKSPACE}/lib" \
+    --with-gifincludedir="${WORKSPACE}/include" \
+    --with-giflibdir="${WORKSPACE}/lib"
+      
   execute make -j $MJOBS
   execute make install
 
