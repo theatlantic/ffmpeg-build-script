@@ -681,6 +681,18 @@ if build "libwebp"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libwebp")
 
+if build "openjpeg"; then
+  download "https://github.com/uclouvain/openjpeg/archive/v2.3.1.tar.gz" "openjpeg-2.3.1.tar.gz"
+  make_dir build
+  cd build || exit
+  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DBUILD_CODEC=OFF ..
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "openjpeg"
+fi
+CONFIGURE_OPTIONS+=("--enable-libopenjpeg")
+
 ##
 ## other library
 ##
