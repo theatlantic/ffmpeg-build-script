@@ -17,7 +17,7 @@ RUN SKIPINSTALL=yes /app/build-ffmpeg --build --full-static
 # Check shared library
 RUN ! ldd /app/workspace/bin/ffmpeg
 RUN ! ldd /app/workspace/bin/ffprobe
-RUN ! ldd /app/workspace/bin/ffplay
+# RUN ! ldd /app/workspace/bin/ffplay
 
 FROM ubuntu:20.04
 
@@ -27,7 +27,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
 # Copy ffmpeg
 COPY --from=build /app/workspace/bin/ffmpeg /usr/bin/ffmpeg
 COPY --from=build /app/workspace/bin/ffprobe /usr/bin/ffprobe
-COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
+# COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
 
 CMD         ["--help"]
 ENTRYPOINT  ["/usr/bin/ffmpeg"]

@@ -26,12 +26,12 @@ RUN apt-get update \
 # Copy ffmpeg
 COPY --from=build /app/workspace/bin/ffmpeg /usr/bin/ffmpeg
 COPY --from=build /app/workspace/bin/ffprobe /usr/bin/ffprobe
-COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
+# COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
 
 # Check shared library
-RUN ldd /usr/bin/ffmpeg
-RUN ldd /usr/bin/ffprobe
-RUN ldd /usr/bin/ffplay
+RUN ldd /usr/bin/ffmpeg || true
+RUN ldd /usr/bin/ffprobe || true
+# RUN ldd /usr/bin/ffplay
 
 CMD         ["--help"]
 ENTRYPOINT  ["/usr/bin/ffmpeg"]
