@@ -11,8 +11,11 @@ WORKSPACE="$CWD/workspace"
 CFLAGS="-I$WORKSPACE/include"
 CPPFLAGS=-I$PREFIX/include
 LDFLAGS="-L$WORKSPACE/lib"
+CXXFLAGS="$CFLAGS"
 LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz -liconv"
+EXTRA_CFLAGS="-I$WORKSPACE/include"
+EXTRA_LDFLAGS="-L$WORKSPACE/lib"
 CONFIGURE_OPTIONS=()
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -201,6 +204,11 @@ while (( $# > 0 )); do
 					exit 1
 				fi
 				LDEXEFLAGS="-static"
+				CFLAGS="$CFLAGS -static-libgcc -static-libstdc++"
+				CXXFLAGS="$CXXFLAGS -static-libgcc -static-libstdc++"
+				CPPFLAGS="$CPPFLAGS -static-libgcc -static-libstdc++"
+				EXTRA_CFLAGS="$EXTRA_CFLAGS -static"
+				EXTRA_LDFLAGS="$EXTRA_LDFLAGS -static"
 			fi
 			shift
 			;;
@@ -353,7 +361,7 @@ if build "x264"; then
 	download "https://code.videolan.org/videolan/x264/-/archive/stable/x264-stable.tar.bz2"
 
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
-		execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic CXXFLAGS="-fPIC"
+		execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic CXXFLAGS="$CXXFLAGS -fPIC"
 	else
 		execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic
 	fi
@@ -732,9 +740,9 @@ execute ./configure "${CONFIGURE_OPTIONS[@]}" \
 	--enable-static \
 	--enable-small \
 	--enable-version3 \
-	--extra-cflags="${CFLAGS}" \
+	--extra-cflags="${EXTRA_CFLAGS}" \
 	--extra-ldexeflags="${LDEXEFLAGS}" \
-	--extra-ldflags="${LDFLAGS} -liconv" \
+	--extra-ldflags="${EXTRA_LDFLAGS}" \
 	--extra-libs="${EXTRALIBS}" \
 	--pkgconfigdir="$WORKSPACE/lib/pkgconfig" \
 	--pkg-config-flags="--static" \
