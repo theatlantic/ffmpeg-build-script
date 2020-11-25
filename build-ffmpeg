@@ -610,7 +610,7 @@ if build "libwebp"; then
 		--enable-libwebpmux \
 		--disable-shared \
 		--disable-dependency-tracking \
-		--disable-sdl
+		--disable-sdl \
 		--with-pngincludedir="${WORKSPACE}/include" \
 		--with-pnglibdir="${WORKSPACE}/lib" \
 		--with-jpegincludedir="${WORKSPACE}/include" \
