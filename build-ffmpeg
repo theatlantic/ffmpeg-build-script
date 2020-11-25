@@ -125,6 +125,9 @@ execute () {
 
 	# shellcheck disable=SC2181
 	if [ $? -ne 0 ]; then
+		if [ -e $PACKAGES/$FFMPEG_BUILD_DIR/ffbuild/config.log ]; then
+			cat $PACKAGES/$FFMPEG_BUILD_DIR/ffbuild/config.log
+		fi
 		echo "$OUTPUT"
 		echo ""
 		echo "Failed to Execute $*" >&2
