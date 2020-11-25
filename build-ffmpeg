@@ -8,10 +8,12 @@ VERSION=1.20
 CWD=$(pwd)
 PACKAGES="$CWD/packages"
 WORKSPACE="$CWD/workspace"
-CFLAGS="-I$WORKSPACE/include"
-CPPFLAGS=-I$PREFIX/include
-LDFLAGS="-L$WORKSPACE/lib"
+# Add the same hardening flags used by ffmpeg's --toolchain=hardened
+CFLAGS="-I$WORKSPACE/include -O3 -fno-strict-overflow -fstack-protector-all -fPIE"
 CXXFLAGS="$CFLAGS"
+CPPFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
+LDFLAGS="-L$WORKSPACE/lib -Wl,-z,relro -Wl,-z,now"
+
 LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz -liconv"
 EXTRA_CFLAGS="-I$WORKSPACE/include"
@@ -20,6 +22,10 @@ CONFIGURE_OPTIONS=()
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	EXTRALIBS="-liconv"
+	# Remove LDFLAGS hardening that OS X's gnu ld doesn't understand
+	LDFLAGS="-L$WORKSPACE/lib"
+else
+	CONFIGURE_OPTIONS+=("--toolchain=hardened")
 fi
 
 # Speed up the process
