@@ -392,7 +392,7 @@ if build "libvpx"; then
 		sed "s/-Wl,--no-undefined -Wl,-soname/-Wl,-undefined,error -Wl,-install_name/g" build/make/Makefile.patched > build/make/Makefile
 	fi
 
-	execute ./configure --prefix="${WORKSPACE}" --disable-unit-tests --disable-shared --as=yasm
+	execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-vp9-highbitdepth --disable-shared --disable-unit-tests --disable-examples --as=yasm 
 	execute make -j $MJOBS
 	execute make install
 
