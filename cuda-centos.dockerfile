@@ -35,12 +35,12 @@ COPY --from=build /usr/local/cuda-11.1/targets/x86_64-linux/lib/libnppidei.so.11
 # Copy ffmpeg
 COPY --from=build /app/workspace/bin/ffmpeg /usr/bin/ffmpeg
 COPY --from=build /app/workspace/bin/ffprobe /usr/bin/ffprobe
-COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
+# COPY --from=build /app/workspace/bin/ffplay /usr/bin/ffplay
 
 # Check shared library
 RUN ldd /usr/bin/ffmpeg
 RUN ldd /usr/bin/ffprobe
-RUN ldd /usr/bin/ffplay
+# RUN ldd /usr/bin/ffplay
 
 CMD         ["--help"]
 ENTRYPOINT  ["/usr/bin/ffmpeg"]
