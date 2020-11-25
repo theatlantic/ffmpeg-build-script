@@ -138,6 +138,9 @@ execute() {
   if [ $? -ne 0 ]; then
     echo "$OUTPUT"
     echo ""
+    if [ -e $PACKAGES/$FFMPEG_BUILD_DIR/ffbuild/config.log ]; then
+      cat $PACKAGES/$FFMPEG_BUILD_DIR/ffbuild/config.log
+    fi
     echo "Failed to Execute $*" >&2
     exit 1
   fi
