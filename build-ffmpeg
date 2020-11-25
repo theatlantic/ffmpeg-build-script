@@ -832,6 +832,10 @@ if patch -f --dry-run -p1 -i $hevc_patch >/dev/null; then
   patch -p1 -i $hevc_patch
 fi
 
+if [[ "$OSTYPE" != "darwin"* ]]; then
+  CONFIGURE_OPTIONS+=("--enable-hardcoded-tables")
+fi
+
 # shellcheck disable=SC2086
 execute ./configure "${CONFIGURE_OPTIONS[@]}" \
   --disable-autodetect \
