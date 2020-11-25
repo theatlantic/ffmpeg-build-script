@@ -808,6 +808,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
     fi
     CFLAGS+=" -I/usr/local/cuda/include"
     LDFLAGS+=" -L/usr/local/cuda/lib64"
+    export CFLAGS
+    export LDFLAGS
     CONFIGURE_OPTIONS+=("--enable-ffnvcodec" "--enable-cuda-nvcc" "--enable-cuvid" "--enable-nvdec" "--enable-nvenc" "--enable-cuda-llvm")
 
     if [ -z "$LDEXEFLAGS" ]; then
