@@ -653,7 +653,7 @@ CONFIGURE_OPTIONS+=("--enable-libopenjpeg")
 
 if build "libsdl"; then
 	download "https://www.libsdl.org/release/SDL2-2.0.12.tar.gz"
-	execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+	execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --disable-joystick
 	execute make -j $MJOBS
 	execute make install
 

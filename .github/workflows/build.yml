@@ -108,29 +108,40 @@ jobs:
         uses: actions/checkout@v2
 
       - name: pull base image
-        id: ubuntu_pull
+        id: alpine_pull
         run: |
-          docker pull ubuntu:20.04
-      - name: run if ubuntu_pull failed
-        if: failure() && steps.ubuntu_pull.outcome == 'failure'
+          docker pull alpine:3
+      - name: run if alpine_pull failed
+        if: failure() && steps.alpine_pull.outcome == 'failure'
         run: |
-          docker pull ubuntu:20.04
+          docker pull alpine:3
       - name: build ffmpeg
         run: |
-          docker build -t ffmpeg:ubuntu --build-arg "BUILD_FLAG=--build --full-static" -f Dockerfile .
+          docker build -t ffmpeg:alpine -f alpine.dockerfile .
       - name: test run ffmepg
         run: |
-          docker run --rm ffmpeg:ubuntu -buildconf
+          docker run --rm ffmpeg:alpine -buildconf
       - name: extract binaries
         run: |
           mkdir -p workspace
-          docker run --rm --entrypoint="" ffmpeg:ubuntu tar Ccf /usr - bin/ff{probe,mpeg} | tar Cxf workspace -
+          docker run --rm --entrypoint="" ffmpeg:alpine tar c -C /usr -f - bin/ffprobe bin/ffmpeg | tar Cxf workspace -
+      - name: pull centos:5
+        id: centos5_pull
+        run: |
+          docker pull centos:5
+      - name: run if centos5_pull failed
+        if: failure() && steps.centos5_pull.outcome == 'failure'
+        run: |
+          docker pull centos:5
+      - name: test run ffmpeg on old kernel
+        run: |
+          docker run --rm -v$(pwd):/app centos:5 /app/workspace/bin/ffmpeg -buildconf
       - name: upload binary artifacts
         uses: actions/upload-artifact@v2
         with:
           name: ffmpeg-linux-static-binaries
           path: workspace/bin/ff*
-
+      
   build-cuda-ubuntu-docker:
     name: build in ubuntu docker with cuda
     runs-on: ubuntu-20.04
