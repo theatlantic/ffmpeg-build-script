@@ -3,8 +3,8 @@
 # HOMEPAGE: https://github.com/markus-perl/ffmpeg-build-script
 # LICENSE: https://github.com/markus-perl/ffmpeg-build-script/blob/master/LICENSE
 
-FFMPEG_GIT_DATE=20201104
-FFMPEG_GIT_REF=a1553b0cfb
+FFMPEG_GIT_DATE=20201202
+FFMPEG_GIT_REF=0639f5c
 FFMPEG_BUILD_DIR=ffmpeg-git-20201104-a1553b0cfb
 
 PROGNAME=$(basename "$0")
@@ -456,7 +456,7 @@ fi
 CONFIGURE_OPTIONS+=("--enable-libvidstab")
 
 if build "svt-av1"; then
-	download "https://github.com/AOMediaCodec/SVT-AV1/archive/38a5fd1.tar.gz" "svt-av1-38a5fd1.tar.gz"
+	download "https://github.com/AOMediaCodec/SVT-AV1/archive/v0.8.6.tar.gz" "svt-av1-38a5fd1.tar.gz"
 	cd Build/linux || exit
 		sed -i.backup 's/check_executable \-p sudo/check_executable \-p sudo || true/' build.sh
 
@@ -472,7 +472,7 @@ fi
 CONFIGURE_OPTIONS+=("--enable-libsvtav1")
 
 if build "svt-hevc"; then
-	download "https://github.com/OpenVisualCloud/SVT-HEVC/archive/d5dd0f8.tar.gz" "svt-hevc-d5dd0f8.tar.gz"
+	download "https://github.com/OpenVisualCloud/SVT-HEVC/archive/3000da7.tar.gz" "svt-hevc-20201113-3000da7.tar.gz"
 	cd Build/linux || exit
 
 	sed -i.backup 's/  check_executable sudo/  \# check_executable sudo/' build.sh
