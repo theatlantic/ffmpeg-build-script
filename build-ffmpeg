@@ -434,7 +434,15 @@ if ! $MACOS_M1; then
   if build "svtav1"; then
     download "https://github.com/AOMediaCodec/SVT-AV1/archive/38a5fd1.tar.gz" "svt-av1-38a5fd1.tar.gz"
     cd Build/linux || exit
-    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../.. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR:PATH=lib
+    SVT_AV1_CMAKE_EXTRA_FLAGS=("-DCMAKE_INSTALL_LIBDIR:PATH=lib")
+
+    # Increase pthread stack size for musl libc
+    if command_exists ldd && ldd /bin/ls | grep -q musl; then
+      SVT_AV1_CMAKE_EXTRA_FLAGS+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
+    fi
+    
+    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../.. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
+      "${SVT_AV1_CMAKE_EXTRA_FLAGS[@]}"
     execute make -j $MJOBS
     execute make install
     execute cp SvtAv1Enc.pc "${WORKSPACE}/lib/pkgconfig/"
@@ -596,7 +604,14 @@ if build "svt-hevc"; then
 
   sed -i.backup 's/  check_executable sudo/  \# check_executable sudo/' build.sh
 
-  CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_LIBDIR:PATH=lib" execute ./build.sh "prefix=${WORKSPACE}" static release install
+  SVT_HEVC_CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_LIBDIR:PATH=lib"
+
+  # Increase pthread stack size for musl libc
+  if command_exists ldd && ldd /bin/ls | grep -q musl; then
+    SVT_HEVC_CMAKE_EXTRA_FLAGS+=" -DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152"
+  fi
+
+  CMAKE_EXTRA_FLAGS="$SVT_HEVC_CMAKE_EXTRA_FLAGS" execute ./build.sh "prefix=${WORKSPACE}" static release install
 
   build_done "svt-hevc"
 fi
@@ -857,6 +872,11 @@ hevc_patch=$(ls $PACKAGES/svt-hevc-*/ffmpeg_plugin/0001-lavc-svt_hevc-add-libsvt
 if patch -f --dry-run -p1 -i $hevc_patch >/dev/null; then
   echo "Applying SVT-HEVC patch"
   patch -p1 -i $hevc_patch
+fi
+
+# Increase pthread stack size for musl libc
+if command_exists ldd && ldd /bin/ls | grep -q musl; then
+  EXTRA_LDFLAGS+=" -Wl,-z,stack-size=2097152"
 fi
 
 if [[ "$OSTYPE" != "darwin"* ]]; then
