@@ -30,7 +30,15 @@ RUN apk add --no-cache --update \
   bzip2-static \
   libtool \
   diffutils \
-  patch
+  patch \
+  python3 \
+  rust \
+  cargo \
+  xxd
+
+RUN apk add --no-cache \
+  --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
+  cargo-c
 
 RUN bash -c 'mkdir -p /app/{packages,workspace}'
 

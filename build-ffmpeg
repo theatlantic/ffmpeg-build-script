@@ -18,10 +18,12 @@ WORKSPACE="$CWD/workspace"
 CFLAGS="-I$WORKSPACE/include -O3 -fno-strict-overflow -fstack-protector-all -fPIE"
 CXXFLAGS="$CFLAGS"
 CPPFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
-LDFLAGS="-L$WORKSPACE/lib -Wl,-z,relro -Wl,-z,now"
+LDFLAGS="$LDFLAGS -L$WORKSPACE/lib"
+export RUSTFLAGS="-L$WORKSPACE/lib"
+export LIBGIT2_SYS_USE_PKG_CONFIG=1
 
 LDEXEFLAGS=""
-EXTRALIBS="-ldl -lpthread -lm -lz -liconv"
+EXTRALIBS="-ldl -lpthread -lm -lz -liconv -lstdc++"
 EXTRA_CFLAGS="-I$WORKSPACE/include"
 EXTRA_LDFLAGS="-L$WORKSPACE/lib"
 MACOS_M1=false
@@ -36,10 +38,9 @@ fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
   EXTRALIBS="-liconv"
-  # Remove LDFLAGS hardening that OS X's gnu ld doesn't understand
-  LDFLAGS="-L$WORKSPACE/lib"
 else
   CONFIGURE_OPTIONS+=("--toolchain=hardened")
+  LDFLAGS+=" -Wl,-z,relro -Wl,-z,now"
 fi
 
 # Speed up the process
@@ -287,8 +288,13 @@ fi
 mkdir -p "$PACKAGES"
 mkdir -p "$WORKSPACE"
 
+# Increase pthread stack size for musl libc
+if command_exists ldd && ldd /bin/ls | grep -q musl; then
+  RUSTFLAGS+=" -C link-args=-Wl,-z,stack-size=2097152"
+fi
+
 export PATH="${WORKSPACE}/bin:$PATH"
-PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
+PKG_CONFIG_PATH="${WORKSPACE}/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
 PKG_CONFIG_PATH+=":/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib64/pkgconfig"
 export PKG_CONFIG_PATH
 
@@ -296,6 +302,7 @@ export CFLAGS
 export CXXFLAGS
 export CPPFLAGS
 export LDFLAGS
+export RUSTFLAGS
 
 if ! command_exists "make"; then
   echo "make not installed."
@@ -628,6 +635,77 @@ if build "svt-hevc"; then
   build_done "svt-hevc"
 fi
 CONFIGURE_OPTIONS+=("--enable-libsvthevc")
+
+if command_exists python3; then
+  if build "vmaf"; then
+    if ! command_exists ninja || ! command_exists meson; then
+      if [ ! -e "$WORKSPACE/bin/python3" ]; then
+        python3 -mvenv $WORKSPACE
+      fi
+      if ! command_exists ninja; then
+        $WORKSPACE/bin/python3 -m pip install ninja
+      fi
+      if ! command_exists meson; then
+        $WORKSPACE/bin/python3 -m pip install meson
+      fi
+    fi
+    download "https://github.com/Netflix/vmaf/archive/v2.1.1.tar.gz" "vmaf-2.1.1.tar.gz"
+    execute meson setup libvmaf libvmaf/build \
+      "--prefix=${WORKSPACE}" \
+      --default-library=static \
+      --buildtype=release \
+      -Denable_tests=false \
+      -Denable_docs=false \
+      -Dbuilt_in_models=true \
+      -Denable_avx512=true \
+      -Denable_float=true
+    execute ninja -vC libvmaf/build install
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      perl -pi -e 's/^(Libs: [^\n]+)$/$1 -lstdc++/' $WORKSPACE/lib/pkgconfig/libvmaf.pc
+    fi
+    build_done "vmaf"
+  fi
+  CONFIGURE_OPTIONS+=("--enable-libvmaf")  
+fi
+
+if command_exists cargo; then
+  if build "rav1e"; then
+    download "https://github.com/xiph/rav1e/archive/v0.4.0.tar.gz" "cargo-0.4.0.tar.gz"
+    if ! command_exists cargo-cbuild; then
+      execute cargo install "--root=$WORKSPACE" cargo-c
+    fi
+    execute cargo cinstall --release --library-type=staticlib "--prefix=$WORKSPACE"
+    if [ -n "$LDEXEFLAGS" ]; then
+      sed -i.backup 's/-lgcc_s/-lgcc_eh/g' "${WORKSPACE}/lib/pkgconfig/rav1e.pc"
+    fi
+    build_done "rav1e"
+  fi
+  CONFIGURE_OPTIONS+=("--enable-librav1e")
+fi
+
+if command_exists python3; then
+  if build "dav1d"; then
+    if ! command_exists ninja || ! command_exists meson; then
+      if [ ! -e "$WORKSPACE/bin/python3" ]; then
+        python3 -mvenv $WORKSPACE
+      fi
+      if ! command_exists ninja; then
+        $WORKSPACE/bin/python3 -m pip install ninja
+      fi
+      if ! command_exists meson; then
+        $WORKSPACE/bin/python3 -m pip install meson
+      fi
+    fi
+    download "https://code.videolan.org/videolan/dav1d/-/archive/0.8.1/dav1d-0.8.1.tar.gz"
+    execute meson . build \
+      "--prefix=${WORKSPACE}" \
+      --default-library=static \
+      --buildtype=release
+    execute ninja -vC build install
+    build_done "dav1d"
+  fi
+  CONFIGURE_OPTIONS+=("--enable-libdav1d")
+fi
 
 ##
 ## audio library
