@@ -1,5 +1,7 @@
 FROM ubuntu:20.04 AS build
 
+ARG IS_GHA=""
+
 ENV DEBIAN_FRONTEND noninteractive
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
@@ -11,6 +13,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
+
+ENV IS_GHA "$IS_GHA"
 
 RUN SKIPINSTALL=yes /app/build-ffmpeg --build --full-static
 

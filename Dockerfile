@@ -1,6 +1,7 @@
 FROM ubuntu:20.04 AS build
 
 ARG BUILD_FLAG=--build
+ARG IS_GHA=""
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -11,6 +12,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
+
+ENV IS_GHA "$IS_GHA"
 
 RUN SKIPINSTALL=yes /app/build-ffmpeg $BUILD_FLAG
 

@@ -1,4 +1,5 @@
 ARG VER=20.04
+ARG IS_GHA=""
 
 FROM nvidia/cuda:11.1-devel-ubuntu${VER} AS build
 
@@ -13,6 +14,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
+
+ENV IS_GHA "$IS_GHA"
 
 RUN SKIPINSTALL=yes /app/build-ffmpeg --build
 

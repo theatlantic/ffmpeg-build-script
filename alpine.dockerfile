@@ -1,5 +1,7 @@
 FROM alpine:3 AS build
 
+ARG IS_GHA=""
+
 RUN apk add --no-cache --update \
   autoconf \
   automake \
@@ -36,6 +38,8 @@ RUN bash -c 'touch /app/packages/{nasm,yasm,cmake,zlib,bzip2,openssl}.done'
 
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
+
+ENV IS_GHA "$IS_GHA"
 
 RUN SKIPINSTALL=yes /app/build-ffmpeg --build --full-static
 

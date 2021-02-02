@@ -1,4 +1,5 @@
 ARG VER=8
+ARG IS_GHA=""
 
 FROM nvidia/cuda:11.1-devel-centos${VER} AS build
 
@@ -12,6 +13,8 @@ RUN yum group install -y "Development Tools" \
 
 WORKDIR /app
 COPY ./build-ffmpeg /app/build-ffmpeg
+
+ENV IS_GHA "$IS_GHA"
 
 RUN SKIPINSTALL=yes /app/build-ffmpeg --build
 
