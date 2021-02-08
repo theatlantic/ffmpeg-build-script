@@ -444,7 +444,7 @@ fi
 
 if ! $MACOS_M1; then
   if build "svtav1"; then
-    download "https://github.com/AOMediaCodec/SVT-AV1/archive/38a5fd1.tar.gz" "svt-av1-38a5fd1.tar.gz"
+    download "https://github.com/AOMediaCodec/SVT-AV1/archive/ec7ac87.tar.gz" "svt-av1-ec7ac87.tar.gz"
     cd Build/linux || exit
     SVT_AV1_CMAKE_EXTRA_FLAGS=("-DCMAKE_INSTALL_LIBDIR:PATH=lib")
 
