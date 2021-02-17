@@ -336,6 +336,7 @@ if build "pkg-config"; then
 fi
 
 if command_exists "python"; then
+  export CPPFLAGS=$(echo "$CPPFLAGS" | perl -pne 's/\-fPIE//g')
 
   if build "lv2"; then
     download "https://lv2plug.in/spec/lv2-1.18.0.tar.bz2" "lv2-1.18.0.tar.bz2"
@@ -400,6 +401,8 @@ if command_exists "python"; then
   fi
 
   CONFIGURE_OPTIONS+=("--enable-lv2")
+
+  CPPFLAGS+=" -fPIE"
 fi
 
 if build "yasm"; then
